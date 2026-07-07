@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+langchain
+langgraph
+networkx
+pydantic
+python-dotenv
+openai
+neo4j
+pytest
