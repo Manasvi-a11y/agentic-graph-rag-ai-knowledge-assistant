@@ -51,3 +51,34 @@ Developers face fragmentation when searching for answers across documentation, n
 5. Agent orchestration and reasoning
 6. Frontend chat UI and API integration
 7. Testing, documentation, and deployment
+
+## Getting started
+
+1. Install dependencies:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+2. Set your OpenAI API key:
+
+```powershell
+setx OPENAI_API_KEY "your_api_key_here"
+```
+
+3. Run ingestion to build the vector store:
+
+```powershell
+python ingestion/run_ingestion.py
+```
+
+4. Query the indexed documents:
+
+```powershell
+python retrieval/retriever.py
+```
+
+## Notes
+
+- Put your PDFs in `knowledge_base/` before running ingestion.
+- The vector store is persisted to `vector_db/`.

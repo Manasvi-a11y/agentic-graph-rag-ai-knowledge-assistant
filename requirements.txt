@@ -2,6 +2,8 @@ fastapi
 uvicorn
 openai
 langchain
+chromadb
+pypdf
 faiss-cpu
 python-dotenv
 pytest
