@@ -1,10 +1,9 @@
 fastapi
 uvicorn
-langchain
-langgraph
-networkx
-pydantic
-python-dotenv
 openai
-neo4j
+langchain
+chromadb
+pypdf
+faiss-cpu
+python-dotenv
 pytest
