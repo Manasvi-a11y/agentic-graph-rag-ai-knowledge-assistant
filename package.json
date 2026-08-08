@@ -1,0 +1,13 @@
+{
+  "name": "agentic-graph-rag-ai-knowledge-assistant",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix frontend run dev",
+    "lint": "npm --prefix frontend run lint"
+  },
+  "dependencies": {
+    "axios": "^1.18.1"
+  }
+}

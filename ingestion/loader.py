@@ -1,31 +1,36 @@
 from pathlib import Path
 from typing import List
 
-from langchain.document_loaders import PyPDFLoader
-from langchain.schema import Document
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    TextLoader,
+)
+
+from langchain_core.documents import Document
 
 
-def list_pdf_paths(root_dir: Path) -> List[Path]:
-    return sorted(root_dir.rglob("*.pdf"))
+class DocumentLoader:
 
+    def __init__(self, knowledge_base: str):
 
-def load_documents(root_dir: Path) -> List[Document]:
-    root_dir = Path(root_dir)
-    documents: List[Document] = []
+        self.knowledge_base = Path(knowledge_base)
 
-    for pdf_path in list_pdf_paths(root_dir):
-        loader = PyPDFLoader(str(pdf_path))
-        pdf_docs = loader.load()
-        for doc in pdf_docs:
-            metadata = dict(doc.metadata)
-            metadata["source_file"] = str(pdf_path.relative_to(root_dir))
-            metadata["source_path"] = str(pdf_path)
-            documents.append(Document(page_content=doc.page_content, metadata=metadata))
+    def load_documents(self) -> List[Document]:
 
-    return documents
+        documents = []
 
+        for file in self.knowledge_base.rglob("*"):
 
-if __name__ == "__main__":
-    root = Path(__file__).resolve().parent.parent / "knowledge_base"
-    docs = load_documents(root)
-    print(f"Loaded {len(docs)} document chunks from {root}")
+            if file.suffix.lower() == ".pdf":
+
+                loader = PyPDFLoader(str(file))
+
+                documents.extend(loader.load())
+
+            elif file.suffix.lower() in [".txt", ".md"]:
+
+                loader = TextLoader(str(file), encoding="utf-8")
+
+                documents.extend(loader.load())
+
+        return documents
