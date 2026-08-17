@@ -1,1 +1,1 @@
-web: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+web: python -m spacy download en_core_web_sm && uvicorn backend.app:app --host 0.0.0.0 --port $PORT
