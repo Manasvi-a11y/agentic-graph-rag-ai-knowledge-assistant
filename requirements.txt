@@ -22,7 +22,7 @@ pytest
 
 numpy
 pandas
-tqdmneo4j
+tqdm
 neo4j>=5.20.0
 neo4j
 neo4j>=5.20.0
