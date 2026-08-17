@@ -25,3 +25,4 @@ pandas
 tqdm
 neo4j>=5.20.0
 spacy>=3.8.0
+langchain-groq
