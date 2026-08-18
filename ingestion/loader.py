@@ -12,25 +12,72 @@ from langchain_core.documents import Document
 class DocumentLoader:
 
     def __init__(self, knowledge_base: str):
-
         self.knowledge_base = Path(knowledge_base)
 
     def load_documents(self) -> List[Document]:
 
         documents = []
 
-        for file in self.knowledge_base.rglob("*"):
+        files = list(self.knowledge_base.rglob("*"))
+
+        print(f"Found {len(files)} files in knowledge base\n")
+
+        for file in files:
+
+            # ==========================
+            # PDF FILES
+            # ==========================
 
             if file.suffix.lower() == ".pdf":
 
-                loader = PyPDFLoader(str(file))
+                try:
+                    loader = PyPDFLoader(str(file))
 
-                documents.extend(loader.load())
+                    loaded_docs = loader.load()
+
+                    documents.extend(loaded_docs)
+
+                    print(
+                        f"OK     : {file} "
+                        f"({len(loaded_docs)} pages)"
+                    )
+
+                except Exception as e:
+
+                    print(f"ERROR  : {file}")
+                    print(f"         {e}")
+                    print("         Skipping this PDF...\n")
+
+                    continue
+
+            # ==========================
+            # TEXT / MARKDOWN FILES
+            # ==========================
 
             elif file.suffix.lower() in [".txt", ".md"]:
 
-                loader = TextLoader(str(file), encoding="utf-8")
+                try:
+                    loader = TextLoader(
+                        str(file),
+                        encoding="utf-8"
+                    )
 
-                documents.extend(loader.load())
+                    loaded_docs = loader.load()
+
+                    documents.extend(loaded_docs)
+
+                    print(f"OK     : {file}")
+
+                except Exception as e:
+
+                    print(f"ERROR  : {file}")
+                    print(f"         {e}")
+                    print("         Skipping this file...\n")
+
+                    continue
+
+        print("\n==============================")
+        print(f"Total documents loaded: {len(documents)}")
+        print("==============================\n")
 
         return documents

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from langchain_chroma import Chroma
 
 from config import settings
@@ -7,23 +9,42 @@ from ingestion.embedding import EmbeddingModel
 class VectorIndexer:
 
     def __init__(self):
+        self.embedding_model = EmbeddingModel().get_embedding_model()
+        self.persist_dir = str(Path(settings.CHROMA_DB_PATH).resolve())
+        Path(self.persist_dir).mkdir(parents=True, exist_ok=True)
 
-        self.embedding_model = (
-            EmbeddingModel()
-            .get_embedding_model()
-        )
+    def _sanitize_chunks(self, chunks):
+        cleaned = []
+        for index, chunk in enumerate(chunks or []):
+            if chunk is None:
+                continue
 
-    def create_vector_store(
-        self,
-        chunks
-    ):
+            content = getattr(chunk, "page_content", "")
+            if not isinstance(content, str):
+                content = str(content) if content is not None else ""
+
+            content = " ".join(content.split())
+            if not content:
+                continue
+
+            chunk.page_content = content
+            if not isinstance(chunk.metadata, dict):
+                chunk.metadata = {}
+            chunk.metadata.setdefault("chunk_id", index)
+            cleaned.append(chunk)
+
+        return cleaned
+
+    def create_vector_store(self, chunks):
+        cleaned_chunks = self._sanitize_chunks(chunks)
+        if not cleaned_chunks:
+            raise ValueError("No valid document chunks were produced for vector indexing.")
 
         vectordb = Chroma.from_documents(
-            documents=chunks,
+            documents=cleaned_chunks,
             embedding=self.embedding_model,
-            persist_directory=settings.CHROMA_DB_PATH
+            persist_directory=self.persist_dir,
         )
 
-        print("Vector Database Created Successfully")
-
+        print(f"Vector Database Created Successfully at {self.persist_dir}")
         return vectordb

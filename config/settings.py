@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     # ==========================
 
     GROQ_API_KEY: str = Field(...)
-    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_MODEL: str = "openai/gpt-oss-20b"
+   
 
     # ==========================
     # Embedding Model
