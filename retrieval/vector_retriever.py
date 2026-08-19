@@ -1,49 +1,41 @@
+import json
+import re
 from pathlib import Path
 
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-
-from config import settings
-from ingestion.loader import DocumentLoader
-from ingestion.splitter import DocumentSplitter
-from ingestion.vector_indexer import VectorIndexer
+from langchain_core.documents import Document
 
 
 class VectorRetriever:
 
     def __init__(self):
-        self.embeddings = None
-        self.db = Chroma(persist_directory=settings.CHROMA_DB_PATH)
+        self.index = self._load_index()
 
-        if self.db._collection.count() > 0:
-            self.embeddings = HuggingFaceEmbeddings(
-                model_name=settings.EMBEDDING_MODEL,
-                model_kwargs={"device": "cpu"},
-                encode_kwargs={"normalize_embeddings": True},
-            )
-            self.db = Chroma(
-                persist_directory=settings.CHROMA_DB_PATH,
-                embedding_function=self.embeddings,
-            )
-        else:
-            self.ensure_vector_store()
-
-    def ensure_vector_store(self):
+    @staticmethod
+    def _load_index():
+        index_path = Path("vector_db/flat_index.json")
+        if not index_path.exists():
+            print("[WARN] Text index is missing; run the Railway build command.")
+            return []
         try:
-            count = self.db._collection.count()
-        except Exception:
-            count = 0
-
-        if count > 0:
-            return
-
-        print("[WARN] Chroma vector store is empty; skipping request-time PDF ingestion.")
-
-    def retrieve(self, query, k=5):
-        if self.db._collection.count() == 0:
+            return json.loads(index_path.read_text(encoding="utf-8"))
+        except Exception as error:
+            print(f"[WARN] Could not load text index: {error}")
             return []
 
-        docs = self.db.similarity_search(query, k=k)
+    def retrieve(self, query, k=5):
+        query_terms = set(re.findall(r"[a-z0-9]+", query.lower()))
+        ranked = []
+        for item in self.index:
+            content = item.get("page_content", "")
+            content_terms = set(re.findall(r"[a-z0-9]+", content.lower()))
+            score = len(query_terms & content_terms)
+            if score:
+                ranked.append((score, item))
+        ranked.sort(key=lambda result: result[0], reverse=True)
+        docs = [
+            Document(page_content=item["page_content"], metadata=item.get("metadata", {}))
+            for _, item in ranked[:k]
+        ]
 
         print("\n==========================")
         print("QUERY:", query)

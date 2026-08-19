@@ -1,24 +1,14 @@
+import json
 from pathlib import Path
 
-from langchain_chroma import Chroma
-
-from config import settings
 from ingestion.loader import DocumentLoader
 from ingestion.splitter import DocumentSplitter
-from ingestion.vector_indexer import VectorIndexer
 
 
 def main():
-    persist_dir = Path(settings.CHROMA_DB_PATH)
-    persist_dir.mkdir(parents=True, exist_ok=True)
-
-    try:
-        existing = Chroma(persist_directory=str(persist_dir))._collection.count()
-    except Exception:
-        existing = 0
-
-    if existing > 0:
-        print(f"[INFO] Chroma index already contains {existing} documents; skipping ingestion.")
+    index_path = Path("vector_db/flat_index.json")
+    if index_path.exists() and index_path.stat().st_size > 0:
+        print(f"[INFO] Text index already exists at {index_path}; skipping ingestion.")
         return
 
     documents = DocumentLoader("knowledge_base").load_documents()
@@ -26,8 +16,19 @@ def main():
         raise RuntimeError("No documents found in knowledge_base.")
 
     chunks = DocumentSplitter().split_documents(documents)
-    VectorIndexer().create_vector_store(chunks)
-    print(f"[OK] Vector index ready with {len(chunks)} chunks.")
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    index_path.write_text(
+        json.dumps(
+            [
+                {"page_content": chunk.page_content, "metadata": chunk.metadata}
+                for chunk in chunks
+                if chunk.page_content and chunk.page_content.strip()
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    print(f"[OK] Text index ready with {len(chunks)} chunks.")
 
 
 if __name__ == "__main__":
