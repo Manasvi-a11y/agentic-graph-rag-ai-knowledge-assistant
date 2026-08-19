@@ -17,7 +17,9 @@ class VectorRetriever:
             print("[WARN] Text index is missing; run the Railway build command.")
             return []
         try:
-            return json.loads(index_path.read_text(encoding="utf-8"))
+            index = json.loads(index_path.read_text(encoding="utf-8"))
+            print(f"[INFO] Loaded text index with {len(index)} chunks.")
+            return index
         except Exception as error:
             print(f"[WARN] Could not load text index: {error}")
             return []
