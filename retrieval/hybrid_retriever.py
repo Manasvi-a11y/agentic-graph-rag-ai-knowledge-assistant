@@ -7,24 +7,30 @@ class HybridRetriever:
 
     def __init__(self):
         self.vector = VectorRetriever()
-        self.graph = GraphRetriever()
-        self.extractor = EntityExtractor()
+        self.graph = None
+        self.extractor = None
+
+        try:
+            self.graph = GraphRetriever()
+            self.extractor = EntityExtractor()
+        except Exception as error:
+            print(f"[WARNING] Graph retrieval disabled: {error}")
 
     def retrieve(self, query):
 
         # Retrieve from Vector DB
         vector_docs = self.vector.retrieve(query)
 
-        # Extract entities from query
-        entities = self.extractor.extract_entities(query)
-
         # Retrieve from Graph DB
         graph_docs = []
 
-        for entity in entities:
-            graph_docs.extend(
-                self.graph.retrieve(entity["text"])
-            )
+        if self.graph is not None and self.extractor is not None:
+            entities = self.extractor.extract_entities(query)
+
+            for entity in entities:
+                graph_docs.extend(
+                    self.graph.retrieve(entity["text"])
+                )
 
         # Merge both results
         combined_docs = []

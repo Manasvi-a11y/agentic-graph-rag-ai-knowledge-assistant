@@ -32,6 +32,12 @@ class AgentEngine:
             print(f"[WARNING] Document retrieval failed: {error}")
             docs = []
 
+        if self.tools is None:
+            return {
+                "answer": "I couldn't find this information in the current knowledge base.",
+                "sources": [],
+            }
+
         result = self.tools.generate_response(
             query,
             docs,
