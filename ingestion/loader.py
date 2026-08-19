@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List
 
@@ -7,6 +8,16 @@ from langchain_community.document_loaders import (
 )
 
 from langchain_core.documents import Document
+
+
+class _MalformedPdfFloatFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        return not (
+            record.name == "pypdf.generic._base"
+            and "FloatObject" in message
+            and "use 0.0 instead" in message
+        )
 
 
 class DocumentLoader:
@@ -33,7 +44,13 @@ class DocumentLoader:
                 try:
                     loader = PyPDFLoader(str(file))
 
-                    loaded_docs = loader.load()
+                    pypdf_logger = logging.getLogger("pypdf.generic._base")
+                    malformed_float_filter = _MalformedPdfFloatFilter()
+                    pypdf_logger.addFilter(malformed_float_filter)
+                    try:
+                        loaded_docs = loader.load()
+                    finally:
+                        pypdf_logger.removeFilter(malformed_float_filter)
 
                     documents.extend(loaded_docs)
 

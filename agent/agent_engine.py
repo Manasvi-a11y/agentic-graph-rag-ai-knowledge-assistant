@@ -7,7 +7,7 @@ class AgentEngine:
 
     def __init__(self):
         self.router = QueryRouter()
-        self.tools = AgentTools()
+        self.tools = None
         self.parser = OutputParser()
 
     def chat(self, query: str, history: list[dict] | None = None):
@@ -25,6 +25,8 @@ class AgentEngine:
             }
 
         try:
+            if self.tools is None:
+                self.tools = AgentTools()
             docs = self.tools.search_documents(query)
         except Exception as error:
             print(f"[WARNING] Document retrieval failed: {error}")
