@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.routes import router
@@ -25,3 +26,8 @@ app.include_router(health_router)
 @app.get("/")
 def root():
     return {"message": "Agentic Graph RAG AI Knowledge Assistant"}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)
