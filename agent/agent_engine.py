@@ -10,6 +10,26 @@ class AgentEngine:
         self.tools = None
         self.parser = OutputParser()
 
+    @staticmethod
+    def _build_search_query(query: str, history) -> str:
+        """Combine the last couple of turns with the current query so short
+        follow-ups (e.g. 'give me an example') keep the conversation's topic
+        instead of searching in isolation."""
+        if not history:
+            return query
+
+        recent_texts = []
+        for message in history[-4:]:
+            if isinstance(message, dict):
+                text = message.get("text")
+            else:
+                text = getattr(message, "text", None)
+            if text:
+                recent_texts.append(text)
+
+        recent_texts.append(query)
+        return " ".join(recent_texts)
+
     def chat(self, query: str, history: list[dict] | None = None):
 
         route = self.router.route(query)
@@ -24,10 +44,12 @@ class AgentEngine:
                 "sources": []
             }
 
+        search_query = self._build_search_query(query, history)
+
         try:
             if self.tools is None:
                 self.tools = AgentTools()
-            docs = self.tools.search_documents(query)
+            docs = self.tools.search_documents(search_query)
         except Exception as error:
             print(f"[WARNING] Document retrieval failed: {error}")
             docs = []
