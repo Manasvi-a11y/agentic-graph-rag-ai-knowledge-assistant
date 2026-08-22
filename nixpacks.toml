@@ -1,5 +1,8 @@
 [phases.setup]
 nixPkgs = ["python312", "nodejs_20"]
 
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
 [phases.build]
 cmds = ["python3 -m ingestion.build_vector_store"]
