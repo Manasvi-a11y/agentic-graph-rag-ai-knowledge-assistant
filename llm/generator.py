@@ -62,9 +62,14 @@ class LLMGenerator:
 
             for message in history:
 
-                sender = message.get("sender")
-                text = message.get("text")
+                if isinstance(message, dict):
+                    sender = message.get("sender")
+                    text = message.get("text")
+                else:
+                    sender = getattr(message, "sender", None)
+                    text = getattr(message, "text", None)
 
+           
                 if sender is not None and text is not None:
                     history_lines.append(
                         f"{sender.capitalize()}: {text}"
