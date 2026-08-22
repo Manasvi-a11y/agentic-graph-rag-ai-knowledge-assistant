@@ -1,2 +1,5 @@
+[phases.setup]
+nixPkgs = ["python312"]
+
 [phases.build]
-cmds = ["python -m ingestion.build_vector_store"]
+cmds = ["python3 -m ingestion.build_vector_store"]
