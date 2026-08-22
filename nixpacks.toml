@@ -2,7 +2,7 @@
 nixPkgs = ["python312", "python312Packages.pip", "nodejs_20"]
 
 [phases.install]
-cmds = ["pip install --no-cache-dir -r requirements.txt"]
+cmds = ["pip install --no-cache-dir --break-system-packages -r requirements.txt"]
 
 [phases.build]
 cmds = ["python3 -m ingestion.build_vector_store"]
