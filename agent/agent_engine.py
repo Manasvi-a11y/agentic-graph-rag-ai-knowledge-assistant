@@ -12,23 +12,29 @@ class AgentEngine:
 
     @staticmethod
     def _build_search_query(query: str, history) -> str:
-        """Combine the last couple of turns with the current query so short
-        follow-ups (e.g. 'give me an example') keep the conversation's topic
-        instead of searching in isolation."""
+        """Add only the immediately preceding USER question (never the long
+        assistant answers) so short follow-ups keep context, without
+        drowning fresh, self-contained questions in unrelated terminology."""
         if not history:
             return query
 
-        recent_texts = []
-        for message in history[-4:]:
+        previous_user_text = None
+        for message in reversed(history):
             if isinstance(message, dict):
+                sender = message.get("sender")
                 text = message.get("text")
             else:
+                sender = getattr(message, "sender", None)
                 text = getattr(message, "text", None)
-            if text:
-                recent_texts.append(text)
 
-        recent_texts.append(query)
-        return " ".join(recent_texts)
+            if sender == "user" and text and text.strip() != query.strip():
+                previous_user_text = text
+                break
+
+        if not previous_user_text:
+            return query
+
+        return f"{previous_user_text} {query}"
 
     def chat(self, query: str, history: list[dict] | None = None):
 
