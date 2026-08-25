@@ -6,6 +6,30 @@ from pathlib import Path
 from langchain_core.documents import Document
 
 
+# Common abbreviations/acronyms students actually type, mapped to the full
+# terms your PDFs spell out. Without this, "OOPs" never matches "Object-
+# Oriented Programming" because they share zero literal words.
+ALIASES = {
+    "oop": "object oriented programming",
+    "oops": "object oriented programming",
+    "os": "operating system",
+    "dbms": "database management system",
+    "db": "database",
+    "ml": "machine learning",
+    "dl": "deep learning",
+    "nlp": "natural language processing",
+    "rl": "reinforcement learning",
+    "dsa": "data structures algorithms",
+    "ds": "data structures",
+    "ai": "artificial intelligence",
+    "ann": "artificial neural network",
+    "toc": "theory of computation",
+    "rag": "retrieval augmented generation",
+    "llm": "large language model",
+    "nn": "neural network",
+}
+
+
 class VectorRetriever:
 
     def __init__(self):
@@ -42,8 +66,21 @@ class VectorRetriever:
         df = self._doc_freq.get(term, 0)
         return math.log((n + 1) / (df + 1)) + 1
 
+    @staticmethod
+    def _expand_terms(text):
+        """Tokenize the text, then add the spelled-out form of any known
+        abbreviation so short jargon like 'OOPs' or 'DBMS' matches the
+        full terms actually used in the source PDFs."""
+        tokens = re.findall(r"[a-z0-9]+", text.lower())
+        expanded = list(tokens)
+        for token in tokens:
+            alias = ALIASES.get(token)
+            if alias:
+                expanded.extend(alias.split())
+        return set(expanded)
+
     def retrieve(self, query, k=5):
-        query_terms = set(re.findall(r"[a-z0-9]+", query.lower()))
+        query_terms = self._expand_terms(query)
         ranked = []
         for item in self.index:
             content = item.get("page_content", "")
