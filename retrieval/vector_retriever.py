@@ -1,40 +1,19 @@
 import json
-import math
-import re
 from pathlib import Path
 
+import numpy as np
 from langchain_core.documents import Document
+from sentence_transformers import SentenceTransformer
 
-
-# Common abbreviations/acronyms students actually type, mapped to the full
-# terms your PDFs spell out. Without this, "OOPs" never matches "Object-
-# Oriented Programming" because they share zero literal words.
-ALIASES = {
-    "oop": "object oriented programming",
-    "oops": "object oriented programming",
-    "os": "operating system",
-    "dbms": "database management system",
-    "db": "database",
-    "ml": "machine learning",
-    "dl": "deep learning",
-    "nlp": "natural language processing",
-    "rl": "reinforcement learning",
-    "dsa": "data structures algorithms",
-    "ds": "data structures",
-    "ai": "artificial intelligence",
-    "ann": "artificial neural network",
-    "toc": "theory of computation",
-    "rag": "retrieval augmented generation",
-    "llm": "large language model",
-    "nn": "neural network",
-}
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 
 class VectorRetriever:
 
     def __init__(self):
         self.index = self._load_index()
-        self._doc_freq = self._build_doc_freq()
+        self.embeddings = self._load_embeddings()
+        self.model = SentenceTransformer(EMBEDDING_MODEL) if self.index else None
 
     @staticmethod
     def _load_index():
@@ -50,61 +29,46 @@ class VectorRetriever:
             print(f"[WARN] Could not load text index: {error}")
             return []
 
-    def _build_doc_freq(self):
-        """How many chunks each word appears in — used to down-weight
-        common filler words ('is', 'what') and up-weight rare, specific
-        words ('turing', 'relational') during scoring."""
-        doc_freq = {}
-        for item in self.index:
-            terms = set(re.findall(r"[a-z0-9]+", item.get("page_content", "").lower()))
-            for term in terms:
-                doc_freq[term] = doc_freq.get(term, 0) + 1
-        return doc_freq
-
-    def _idf(self, term):
-        n = len(self.index) or 1
-        df = self._doc_freq.get(term, 0)
-        return math.log((n + 1) / (df + 1)) + 1
-
     @staticmethod
-    def _expand_terms(text):
-        """Tokenize the text, then add the spelled-out form of any known
-        abbreviation so short jargon like 'OOPs' or 'DBMS' matches the
-        full terms actually used in the source PDFs."""
-        tokens = re.findall(r"[a-z0-9]+", text.lower())
-        expanded = list(tokens)
-        for token in tokens:
-            alias = ALIASES.get(token)
-            if alias:
-                expanded.extend(alias.split())
-        return set(expanded)
+    def _load_embeddings():
+        embeddings_path = Path("vector_db/embeddings.npy")
+        if not embeddings_path.exists():
+            print("[WARN] Embeddings file is missing; run the Railway build command.")
+            return None
+        try:
+            embeddings = np.load(embeddings_path)
+            print(f"[INFO] Loaded embeddings with shape {embeddings.shape}.")
+            return embeddings
+        except Exception as error:
+            print(f"[WARN] Could not load embeddings: {error}")
+            return None
 
     def retrieve(self, query, k=5):
-        query_terms = self._expand_terms(query)
-        ranked = []
-        for item in self.index:
-            content = item.get("page_content", "")
-            content_terms = set(re.findall(r"[a-z0-9]+", content.lower()))
-            matched = query_terms & content_terms
-            if not matched:
-                continue
-            score = sum(self._idf(term) for term in matched)
-            ranked.append((score, item))
-        ranked.sort(key=lambda result: result[0], reverse=True)
+        if not self.index or self.embeddings is None or self.model is None:
+            return []
+
+        query_vector = self.model.encode(
+            [query], normalize_embeddings=True
+        ).astype("float32")[0]
+
+        scores = self.embeddings @ query_vector
+        top_k_idx = np.argsort(scores)[::-1][:k]
+
         docs = [
-            Document(page_content=item["page_content"], metadata=item.get("metadata", {}))
-            for _, item in ranked[:k]
+            Document(
+                page_content=self.index[i]["page_content"],
+                metadata=self.index[i].get("metadata", {}),
+            )
+            for i in top_k_idx
         ]
 
         print("\n==========================")
         print("QUERY:", query)
         print("Retrieved:", len(docs))
-
         for i, doc in enumerate(docs):
-            print(f"\nDocument {i + 1}")
+            print(f"\nDocument {i + 1} (score={scores[top_k_idx[i]]:.3f})")
             print(doc.metadata)
             print(doc.page_content[:300])
-
         print("==========================\n")
 
         return docs

@@ -1,8 +1,13 @@
 import json
 from pathlib import Path
 
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
 from ingestion.loader import DocumentLoader
 from ingestion.splitter import DocumentSplitter
+
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 
 def _clean_text(text: str) -> str:
@@ -15,8 +20,10 @@ def _clean_text(text: str) -> str:
 
 def main():
     index_path = Path("vector_db/flat_index.json")
-    if index_path.exists() and index_path.stat().st_size > 0:
-        print(f"[INFO] Text index already exists at {index_path}; skipping ingestion.")
+    embeddings_path = Path("vector_db/embeddings.npy")
+
+    if index_path.exists() and index_path.stat().st_size > 0 and embeddings_path.exists():
+        print("[INFO] Text index and embeddings already exist; skipping ingestion.")
         return
 
     documents = DocumentLoader("knowledge_base").load_documents()
@@ -42,11 +49,23 @@ def main():
     if skipped:
         print(f"[INFO] Skipped {skipped} chunks that were empty after cleaning.")
 
-    index_path.write_text(
-        json.dumps(records, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    print(f"[INFO] Loading embedding model '{EMBEDDING_MODEL}'...")
+    model = SentenceTransformer(EMBEDDING_MODEL)
+
+    print(f"[INFO] Encoding {len(records)} chunks into embeddings (this takes a while)...")
+    texts = [record["page_content"] for record in records]
+    embeddings = model.encode(
+        texts,
+        batch_size=64,
+        show_progress_bar=True,
+        normalize_embeddings=True,
+    ).astype("float32")
+
+    np.save(embeddings_path, embeddings)
+    index_path.write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
+
     print(f"[OK] Text index ready with {len(records)} chunks.")
+    print(f"[OK] Embeddings saved with shape {embeddings.shape}.")
 
 
 if __name__ == "__main__":
