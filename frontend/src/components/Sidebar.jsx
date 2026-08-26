@@ -18,8 +18,6 @@ const SUBJECTS = [
   "AWS",
 ];
 
-const ACCENTS = ["var(--teal)", "var(--amber)", "var(--violet)"];
-
 function Sidebar({ onPick }) {
   return (
     <aside className="rail">
@@ -32,21 +30,19 @@ function Sidebar({ onPick }) {
         </span>
       </div>
 
-      <div className="rail__index-block">
+      <div>
         <p className="rail__label">Index</p>
         <p className="rail__hint">Tap a subject to ask about it.</p>
       </div>
 
       <ul className="rail__list">
-        {SUBJECTS.map((subject, i) => (
+        {SUBJECTS.map((subject) => (
           <li key={subject}>
             <button
               type="button"
               className="rail__item"
-              style={{ "--dot-color": ACCENTS[i % ACCENTS.length] }}
               onClick={() => onPick(subject)}
             >
-              <span className="rail__dot" aria-hidden="true" />
               {subject}
             </button>
           </li>
